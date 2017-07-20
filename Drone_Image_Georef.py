@@ -15,6 +15,7 @@ import os
 
 from math import pi, sin, cos, tan, sqrt
 
+# Creating a GUI for instructions
 start = Tk()
 Label(start, text="Let's georeference your photos! \n 1) Generate a PhotoScan model with photos.",wraplength=300, justify = LEFT).grid(row=0)
 
@@ -41,15 +42,15 @@ start3.mainloop()
 #LatLong- UTM conversion..h
 #definitions for lat/long to UTM and UTM to lat/lng conversions
 #include <string.h>
-    
+
 _deg2rad = pi / 180.0
 _rad2deg = 180.0 / pi
-    
+
 _EquatorialRadius = 2
 _eccentricitySquared = 3
-    
+
 _ellipsoid = [
-#  id, Ellipsoid name, Equatorial Radius, square of eccentricity	
+#  id, Ellipsoid name, Equatorial Radius, square of eccentricity
 # first once is a placeholder only, To allow array indices to match id numbers
 [ -1, "Placeholder", 0, 0],
 [ 1, "Airy", 6377563, 0.00667054],
@@ -76,84 +77,84 @@ _ellipsoid = [
 [ 22, "WGS-72", 6378135, 0.006694318],
 [ 23, "WGS-84", 6378137, 0.00669438]
     ]
-    
-#Reference ellipsoids derived from Peter H. Dana's website- 
+
+#Reference ellipsoids derived from Peter H. Dana's website-
 #http://www.utexas.edu/depts/grg/gcraft/notes/datum/elist.html
 #Department of Geography, University of Texas at Austin
 #Internet: pdana@mail.utexas.edu
 #3/22/95
-    
+
 #Source
 #Defense Mapping Agency. 1987b. DMA Technical Report: Supplement to Department of Defense World Geodetic System
 #1984 Technical Report. Part I and II. Washington, DC: Defense Mapping Agency
-    
-#def LLtoUTM(int ReferenceEllipsoid, const double Lat, const double Long, 
+
+#def LLtoUTM(int ReferenceEllipsoid, const double Lat, const double Long,
 #double &UTMNorthing, double &UTMEasting, char* UTMZone)
-    
+
 #convert lat long to UTM
 #code from http://robotics.ai.uiuc.edu/~hyoon24/LatLongUTMconversion.py
-    
+
 def LLtoUTM(ReferenceEllipsoid, Lat, Long):
-    #converts lat/long to UTM coords.  Equations from USGS Bulletin 1532 
-    #East Longitudes are positive, West longitudes are negative. 
+    #converts lat/long to UTM coords.  Equations from USGS Bulletin 1532
+    #East Longitudes are positive, West longitudes are negative.
     #North latitudes are positive, South latitudes are negative
     #Lat and Long are in decimal degrees
     #Written by Chuck Gantz- chuck.gantz@globalstar.com
-    
+
     a = _ellipsoid[ReferenceEllipsoid][_EquatorialRadius]
     eccSquared = _ellipsoid[ReferenceEllipsoid][_eccentricitySquared]
     k0 = 0.9996
-    
+
     #Make sure the longitude is between -180.00 .. 179.9
     LongTemp = (Long+180)-int((Long+180)/360)*360-180 # -180.00 .. 179.9
-    
+
     LatRad = Lat*_deg2rad
     LongRad = LongTemp*_deg2rad
-    
+
     ZoneNumber = int((LongTemp + 180)/6) + 1
-      
+
     if Lat >= 56.0 and Lat < 64.0 and LongTemp >= 3.0 and LongTemp < 12.0:
         ZoneNumber = 32
-    
+
         # Special zones for Svalbard
     if Lat >= 72.0 and Lat < 84.0:
         if  LongTemp >= 0.0  and LongTemp <  9.0:ZoneNumber = 31
         elif LongTemp >= 9.0  and LongTemp < 21.0: ZoneNumber = 33
         elif LongTemp >= 21.0 and LongTemp < 33.0: ZoneNumber = 35
         elif LongTemp >= 33.0 and LongTemp < 42.0: ZoneNumber = 37
-    
+
     LongOrigin = (ZoneNumber - 1)*6 - 180 + 3 #+3 puts origin in middle of zone
     LongOriginRad = LongOrigin * _deg2rad
-    
+
         #compute the UTM Zone from the latitude and longitude
     UTMZone = "%d%c" % (ZoneNumber, _UTMLetterDesignator(Lat))
-    
+
     eccPrimeSquared = (eccSquared)/(1-eccSquared)
     N = a/sqrt(1-eccSquared*sin(LatRad)*sin(LatRad))
     T = tan(LatRad)*tan(LatRad)
     C = eccPrimeSquared*cos(LatRad)*cos(LatRad)
     A = cos(LatRad)*(LongRad-LongOriginRad)
-    
+
     M = a*((1- eccSquared/4- 3*eccSquared*eccSquared/64- 5*eccSquared*eccSquared*eccSquared/256)*LatRad - (3*eccSquared/8+ 3*eccSquared*eccSquared/32+ 45*eccSquared*eccSquared*eccSquared/1024)*sin(2*LatRad) + (15*eccSquared*eccSquared/256 + 45*eccSquared*eccSquared*eccSquared/1024)*sin(4*LatRad) - (35*eccSquared*eccSquared*eccSquared/3072)*sin(6*LatRad))
-        
+
     UTMEasting = (k0*N*(A+(1-T+C)*A*A*A/6 + (5-18*T+T*T+72*C-58*eccPrimeSquared)*A*A*A*A*A/120)+ 500000.0)
-    
+
     UTMNorthing = (k0*(M+N*tan(LatRad)*(A*A/2+(5-T+9*C+4*C*C)*A*A*A*A/24 + (61 -58*T +T*T +600*C -330*eccPrimeSquared)*A*A*A*A*A*A/720)))
-    
+
     if Lat < 0:
         UTMNorthing = UTMNorthing + 10000000.0; #10000000 meter offset for southern hemisphere
     return (UTMZone, UTMEasting, UTMNorthing)
-    
-    
+
+
 def _UTMLetterDesignator(Lat):
     #This routine determines the correct UTM letter designator for the given latitude
     #returns 'Z' if latitude is outside the UTM limits of 84N to 80S
     #Written by Chuck Gantz- chuck.gantz@globalstar.com
-    
+
     if  Lat >= 0: return 'N'
     elif Lat < 0: return 'S'
     else: return 'Z'	# if the Latitude is outside the UTM limits
-        
+
 def take():
     file_path = e1.get()
     image_path = e2.get()
@@ -170,13 +171,13 @@ def take():
     camera = tkvar.get()
     lat_long = tkvar2.get()
     cam_loc = tkvar3.get()
-    
-    #importing EXIF data from image imported 
+
+    #importing EXIF data from image imported
     import exifread
-    
+
     if image_path == '':
         f = 0
-        #Adding various cameras 
+        #Adding various cameras
         if camera == 'GoPro Hero 4':
             pix_size_cam = 0.0017
             focal_length = 3
@@ -203,18 +204,18 @@ def take():
             imwidp1 = tags['EXIF ExifImageWidth']
             imwidp2 = str(imwidp1)
             im_wid_p = float(imwidp2)
-    
+
             imheip1 = tags['EXIF ExifImageLength']
             imheip2 = str(imheip1)
             im_hei_p = float(imheip2)
-    
+
             fl1 = tags['EXIF FocalLength']
             fl2 = repr(fl1)
             fl3 = fl2.split('=')
             fl4 = fl3[1]
             fl5 = fl4.split('/')
             focal_length = float(fl5[0])/10
-    
+
             f1 = tags['EXIF FocalLengthIn35mmFilm']
             f2 = str(f1)
             f3 = float(f2)
@@ -226,18 +227,18 @@ def take():
         imwidp1 = tags['EXIF ExifImageWidth']
         imwidp2 = str(imwidp1)
         im_wid_p = float(imwidp2)
-    
+
         imheip1 = tags['EXIF ExifImageLength']
         imheip2 = str(imheip1)
         im_hei_p = float(imheip2)
-    
+
         fl1 = tags['EXIF FocalLength']
         fl2 = repr(fl1)
         fl3 = fl2.split('=')
         fl4 = fl3[1]
         fl5 = fl4.split('/')
         focal_length = float(fl5[0])/10
-    
+
         f1 = tags['EXIF FocalLengthIn35mmFilm']
         f2 = str(f1)
         f3 = float(f2)
@@ -251,13 +252,13 @@ def take():
     else:
         xx = 1
         yy = 2
-    
-    
+
+
     #opening table
-    
+
     from numpy import genfromtxt
     table = genfromtxt(file_path, delimiter=",", dtype=None)
-        
+
     num_lines = len(table)
 
     i = 2
@@ -298,7 +299,7 @@ def take():
         #UTM coordinates for top left corner (c,f)
         C = cos_cc_yaw *(x_nonrot-x_cent)- sin_cc_yaw *(y_nonrot-y_cent)+x_cent
         F = sin_cc_yaw *(x_nonrot-x_cent)+ cos_cc_yaw *(y_nonrot-y_cent)+y_cent
-    
+
         #projection and wkt codes for every UTM zone
         if utm_coords[0]=='1N':
             project = 'PROJCS["WGS_1984_UTM_Zone_1N",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",-177],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",0],UNIT["Meter",1]]'
@@ -540,9 +541,9 @@ def take():
             project ='PROJCS["WGS_1984_UTM_Zone_59S",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",171],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",10000000],UNIT["Meter",1]]'
         elif utm_coords[0]=='60S':
             project ='PROJCS["WGS_1984_UTM_Zone_60S",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",177],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",10000000],UNIT["Meter",1]]'
-       
+
         aux = '<PAMDataset> <SRS>' + project + '</SRS> </PAMDataset>'
-            
+
         #generating jpw files and writing them
         new_file = open(save_path+'/'+name[:-11]+'.jpgw', 'a')
         new_file.close()
@@ -559,7 +560,7 @@ def take():
         new_file2.write("\n")
         new_file2.write(str(F))
         new_file2.close()
-        #generating .prj files for GlobalMapper
+        #generating .prj files
         new_file_prj = open(save_path+'/'+name[:-11]+'.prj','a')
         new_file.close()
         new_file_prj2 = open(save_path+'/'+name[:-11]+'.prj','w')
@@ -572,9 +573,9 @@ def take():
         new_file_aux2.write(str(aux))
         new_file_aux2.close()
         #looping through while loop
-        i = i + 1 
+        i = i + 1
     return
-    
+#Creating a GUI for user input
 master = Tk()
 master.title("Georeference your UAS photos!")
 Label(master, text="Coordinates file path:").grid(row=1)
@@ -600,28 +601,28 @@ Button(master, text='Enter', command=take).grid(row=17, column=1, sticky=W, pady
 
 # Create a Tkinter variable
 tkvar2 = StringVar(master)
- 
+
 # Dictionary with options
 choices2 = { 'Degrees','UTM'}
 tkvar2.set('UTM') # set the default option
- 
+
 popupMenu2 = OptionMenu(master, tkvar2, *choices2)
 Label(master, text="Degrees or UTM (WGS 84):").grid(row = 3, column = 0)
 popupMenu2.grid(row = 3, column =1)
 
 def change_dropdown(*args):
     print( tkvar2.get() )
- 
+
 # link function to change dropdown
 tkvar2.trace('w', change_dropdown)
 
 # Create a Tkinter variable
 tkvar = StringVar(master)
- 
+
 # Dictionary with options
 choices = { 'Ricoh GR I & II','GoPro Hero 4','MicaSense RedEdge 3', 'SonyA7R', 'Other'}
 tkvar.set('Ricoh GR I & II') # set the default option
- 
+
 popupMenu = OptionMenu(master, tkvar, *choices)
 Label(master, text="Choose a camera:").grid(row = 7, column = 0)
 popupMenu.grid(row = 7, column =1)
@@ -632,11 +633,11 @@ def change_dropdown2(*args):
 tkvar.trace('w', change_dropdown2)
 
 tkvar3 = StringVar(master)
- 
+
 # Dictionary with options
 choices3 = { 'GeoTagged', 'Estimated' }
 tkvar3.set('GeoTagged') # set the default option
- 
+
 popupMenu3 = OptionMenu(master, tkvar3, *choices3)
 Label(master, text="Estimated or Geotagged:").grid(row = 11, column = 0)
 popupMenu3.grid(row = 11, column =1)
@@ -647,11 +648,11 @@ def change_dropdown3(*args):
 tkvar3.trace('w', change_dropdown3)
 
 tkvar4 = StringVar(master)
- 
+
 # Dictionary with options
 choices4 = { 'S','N'}
 tkvar4.set('N') # set the default option
- 
+
 popupMenu4 = OptionMenu(master, tkvar4, *choices4)
 popupMenu4.grid(row = 5, column =3)
 
@@ -659,10 +660,8 @@ def change_dropdown4(*args):
     print( tkvar4.get() )
 # link function to change dropdown
 tkvar4.trace('w', change_dropdown4)
- 
+
 mainloop( )
 
 finish = Tk()
 Label(finish, text='Finished!')
-
-
