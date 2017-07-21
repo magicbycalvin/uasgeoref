@@ -50,50 +50,92 @@ def rotate3D(xuas,yuas,zuas,imwidg,imheig,surfel,roll,pitch,yaw):
     yrotzxy = yrotzx
     zrotzxy = ((zrotzx-zuas)*math.cos(pitch))-((xrotzx-xuas)*math.sin(pitch))+zuas
 
-    return xrotzxy, yrotzxy, zrotzxy, xrotz, yrotz, zrotz
+    return xrotzxy, yrotzxy, zrotzxy
 
 
-#eventually this will loop through each image
-#info from image EXIF
-# roll pitch and yaw measurements from UAS
-r = 11.244716
-p = -10.242028
-y = 82.727883
-#converting from clockwise to counterclockwise rotation
-if r > 0:
-    rolldeg = 360 - r
-elif r <= 0:
-    rolldeg = abs(r)
-if p > 0:
-    pitchdeg = 360 - p
-elif p <= 0:
-    pitchdeg = abs(p)
-if y > 0:
-    yawdeg = 360 - y
-elif y <= 0:
-    yawdeg = abs(y)
-
-#converting roll pitch and yaw to radians
-roll = np.deg2rad(rolldeg)
-pitch = np.deg2rad(pitchdeg)
-yaw = np.deg2rad(yawdeg)
-
-#coordinates for UAS in UTM
-xuas = 824113.2228273607
-yuas = 651898.4524470394
-zuas = 62.190000
-
+r = 0
+p = 0
+y = 0
+#coordinates for UAS in UTM taken from Barren Ricoh
+xuas = 827106.3613
+yuas = 649895.2486
+zuas = 131.16
 # Eventually I am going to figure out how to get surface elevation using a DEM
 surfel = 2.19
-
 #camera parameters
 imwidp = 4928
 imheip = 3264
-altitude = 60
+altitude = 131.6
 fl = 18.3
 pixsizecam = 0.0048
 gsd = (pixsizecam*altitude)/(fl/100)
-imwidg = gsd*imwidp
-imheig = gsd*imheip
+imwidg = (gsd*imwidp)/100
+imheig = (gsd*imheip)/100
 #resulting rotated coordinates
-xyzrot = rotate3D(xuas,yuas,zuas,imwidg,imheig,surfel,roll,pitch,yaw)
+print 'changing roll'
+while r <= 360:
+    p = 0
+    y = 0
+    #converting roll pitch and yaw to radians
+    roll = np.deg2rad(r)
+    pitch = np.deg2rad(p)
+    yaw = np.deg2rad(y)
+    xyzrot = rotate3D(xuas,yuas,zuas,imwidg,imheig,surfel,roll,pitch,yaw)
+    print xyzrot[0]
+    r = r + 10
+
+r = 0
+while r <= 360:
+    p = 0
+    y = 0
+    #converting roll pitch and yaw to radians
+    roll = np.deg2rad(r)
+    pitch = np.deg2rad(p)
+    yaw = np.deg2rad(y)
+    xyzrot = rotate3D(xuas,yuas,zuas,imwidg,imheig,surfel,roll,pitch,yaw)
+    print xyzrot[1]
+    r = r + 10
+
+print 'changing pitch'
+while p <= 360:
+    r = 0
+    y = 0
+    roll = np.deg2rad(r)
+    pitch = np.deg2rad(p)
+    yaw = np.deg2rad(y)
+    xyzrot = rotate3D(xuas,yuas,zuas,imwidg,imheig,surfel,roll,pitch,yaw)
+    print xyzrot[0]
+    p = p + 10
+
+p = 0
+while p <= 360:
+    r = 0
+    y = 0
+    roll = np.deg2rad(r)
+    pitch = np.deg2rad(p)
+    yaw = np.deg2rad(y)
+    xyzrot = rotate3D(xuas,yuas,zuas,imwidg,imheig,surfel,roll,pitch,yaw)
+    print xyzrot[1]
+    p = p + 10
+
+print 'changing yaw'
+while y <= 360:
+    p = 0
+    r = 0
+    y = y + 10
+    roll = np.deg2rad(r)
+    pitch = np.deg2rad(p)
+    yaw = np.deg2rad(y)
+    xyzrot = rotate3D(xuas,yuas,zuas,imwidg,imheig,surfel,roll,pitch,yaw)
+    print xyzrot[0]
+
+y = 0
+while y <= 360:
+    p = 0
+    r = 0
+    y = y + 10
+    roll = np.deg2rad(r)
+    pitch = np.deg2rad(p)
+    yaw = np.deg2rad(y)
+    xyzrot = rotate3D(xuas,yuas,zuas,imwidg,imheig,surfel,roll,pitch,yaw)
+    print xyzrot[1]
