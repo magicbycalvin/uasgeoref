@@ -32,11 +32,7 @@ import math
 
 # defining function for 3D rotation of pixel location
 #currently this will just be for calculating the topleft corner but eventually this will be used to rotate the location of every pixel
-def rotate3D(xuas,yuas,zuas,imwidg,imheig,surfel,roll,pitch,yaw):
-    # non-rotated xyz of top left corner of image
-    xtlnonrot = xuas - (imwidg/2)
-    ytlnonrot =  yuas + (imheig/2)
-    ztlnonrot = surfel
+def rotate3D(roll,pitch,yaw):
     # need to rotate points about the center of the drone, so pretend drone location is (0,0,0)
     # yaw rotation of top left corner coordinates
     xrotz = ((xtlnonrot-xuas)  * math.cos(yaw)) - ((ytlnonrot-yuas) *math.sin(yaw))+xuas
@@ -53,42 +49,41 @@ def rotate3D(xuas,yuas,zuas,imwidg,imheig,surfel,roll,pitch,yaw):
 
     return xrotzxy, yrotzxy, zrotzxy
 
-def rotateyaw(xuas,yuas,zuas,imwidg,imheig,surfel,yaw):
-    # non-rotated xyz of top left corner of image
-    xtlnonrot = xuas - (imwidg/2)
-    ytlnonrot =  yuas + (imheig/2)
-    ztlnonrot = surfel
+def rotateyaw(yaw):
     # need to rotate points about the center of the drone, so pretend drone location is (0,0,0)
     # yaw rotation of top left corner coordinates
-    xrotz = ((xtlnonrot-xuas)  * math.cos(yaw)) - ((ytlnonrot-yuas) *math.sin(yaw))+xuas
-    yrotz = ((xtlnonrot-xuas)*math.sin(yaw))+((ytlnonrot-yuas)*math.cos(yaw))+yuas
-    zrotz = ztlnonrot
+    cc_yaw = 360 - yaw
+    cos_cc_yaw = math.cos(math.radians(cc_yaw))
+    sin_cc_yaw = math.sin(math.radians(cc_yaw))
+    xrotz  = cos_cc_yaw *(xtlnonrot-xuas)- sin_cc_yaw *(ytlnonrot-yuas)+xuas
+    yrotz = sin_cc_yaw *(xtlnonrot-xuas)+ cos_cc_yaw *(ytlnonrot-yuas)+yuas
 
-    return xrotz, yrotz, zrotz
+    return xrotz, yrotz
 
-def rotateroll(xuas,yuas,zuas,imwidg,imheig,surfel,roll):
-    # non-rotated xyz of top left corner of image
-    xtlnonrot = xuas - (imwidg/2)
-    ytlnonrot =  yuas + (imheig/2)
-    ztlnonrot = surfel
+def rotateroll(roll):
     # need to rotate points about the center of the drone, so pretend drone location is (0,0,0)
     # roll rotation of top left corner coordinates
+    cc_roll = 360 - roll
+    cos_cc_roll = math.cos(math.radians(cc_roll))
+    sin_cc_roll = math.sin(math.radians(cc_roll))
     xrotx = xtlnonrot
-    yrotx = ((ytlnonrot-yuas)*math.cos(roll))-((ztlnonrot-zuas)*math.sin(roll))+yuas
-    zrotx = ((ytlnonrot-yuas)*math.sin(roll))-((ztlnonrot-zuas)*math.cos(roll))+zuas
+    yrotx = cos_cc_roll *(ytlnonrot-yuas)- sin_cc_roll *(ztlnonrot-zuas)+yuas
+    zrotx = sin_cc_roll * (ytlnonrot-yuas)- cos_cc_roll * (ztlnonrot-zuas)+zuas
 
     return xrotx, yrotx, zrotx
 
-def rotatepitch(xuas,yuas,zuas,imwidg,imheig,surfel,pitch):
-    # non-rotated xyz of top left corner of image
-    xtlnonrot = xuas - (imwidg/2)
-    ytlnonrot =  yuas + (imheig/2)
-    ztlnonrot = surfel
+def rotatepitch(pitch):
     # need to rotate points about the center of the drone, so pretend drone location is (0,0,0)
     # pitch rotation of top left corner coordinates
-    xroty = ((ztlnonrot-zuas)*math.sin(pitch))-((xtlnonrot-xuas)*math.cos(pitch))+xuas
+    cc_pitch = 360 - pitch
+    radpitch = math.radians(cc_pitch)
+    cos_cc_pitch = math.cos(radpitch)
+    sin_cc_pitch = math.sin(radpitch)
+        #xrotz  = cos_cc_yaw *(xtlnonrot-xuas)- sin_cc_yaw *(ytlnonrot-yuas)+xuas
+        #yrotz = sin_cc_yaw *(xtlnonrot-xuas)+ cos_cc_yaw *(ytlnonrot-yuas)+yuas
+    xroty = sin_cc_pitch *(ztlnonrot-zuas)- cos_cc_pitch*(xtlnonrot-xuas)+xuas
     yroty = ytlnonrot
-    zroty = ((ztlnonrot-zuas)*math.cos(pitch))-((xtlnonrot-xuas)*math.sin(pitch))+zuas
+    zroty = cos_cc_pitch *(ztlnonrot-zuas)- sin_cc_pitch*(xtlnonrot-xuas)+zuas
 
     return xroty, yroty, zroty
 
@@ -105,77 +100,49 @@ surfel = 2.19
 #camera parameters
 imwidp = 4928
 imheip = 3264
-altitude = 131.6
+altitude = zuas - surfel
 fl = 18.3
 pixsizecam = 0.0048
 gsd = (pixsizecam*altitude)/(fl/100)
 imwidg = (gsd*imwidp)/100
 imheig = (gsd*imheip)/100
+xtlnonrot = xuas - (imwidg/2)
+ytlnonrot =  yuas + (imheig/2)
+ztlnonrot = surfel
+
 #resulting rotated coordinates
 print 'changing roll'
 while r <= 360:
-    p = 0
-    y = 0
-    #converting roll pitch and yaw to radians
-    roll = np.deg2rad(r)
-    pitch = np.deg2rad(p)
-    yaw = np.deg2rad(y)
-    xyzrot = rotateroll(xuas,yuas,zuas,imwidg,imheig,surfel,roll)
+    xyzrot = rotateroll(r)
     print xyzrot[0]
     r = r + 10
 
 r = 0
 while r <= 360:
-    p = 0
-    y = 0
-    #converting roll pitch and yaw to radians
-    roll = np.deg2rad(r)
-    pitch = np.deg2rad(p)
-    yaw = np.deg2rad(y)
-    xyzrot = rotateroll(xuas,yuas,zuas,imwidg,imheig,surfel,roll)
+    xyzrot = rotateroll(r)
     print xyzrot[1]
     r = r + 10
 
 print 'changing pitch'
 while p <= 360:
-    r = 0
-    y = 0
-    roll = np.deg2rad(r)
-    pitch = np.deg2rad(p)
-    yaw = np.deg2rad(y)
-    xyzrot = rotatepitch(xuas,yuas,zuas,imwidg,imheig,surfel,pitch)
+    xyzrot = rotatepitch(p)
     print xyzrot[0]
     p = p + 10
 
 p = 0
 while p <= 360:
-    r = 0
-    y = 0
-    roll = np.deg2rad(r)
-    pitch = np.deg2rad(p)
-    yaw = np.deg2rad(y)
-    xyzrot = rotatepitch(xuas,yuas,zuas,imwidg,imheig,surfel,pitch)
+    xyzrot = rotatepitch(p)
     print xyzrot[1]
     p = p + 10
 
 print 'changing yaw'
 while y <= 360:
-    p = 0
-    r = 0
+    xyzrot = rotateyaw(y)
     y = y + 10
-    roll = np.deg2rad(r)
-    pitch = np.deg2rad(p)
-    yaw = np.deg2rad(y)
-    xyzrot = rotateyaw(xuas,yuas,zuas,imwidg,imheig,surfel,yaw)
     print xyzrot[0]
 
 y = 0
 while y <= 360:
-    p = 0
-    r = 0
+    xyzrot = rotateyaw(y)
     y = y + 10
-    roll = np.deg2rad(r)
-    pitch = np.deg2rad(p)
-    yaw = np.deg2rad(y)
-    xyzrot = rotateyaw(xuas,yuas,zuas,imwidg,imheig,surfel,yaw)
     print xyzrot[1]
