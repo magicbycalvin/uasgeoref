@@ -37,7 +37,7 @@ def rotate3D(roll,pitch,yaw):
     # yaw rotation of top left corner coordinates
     xrotz = ((xtlnonrot-xuas)  * math.cos(yaw)) - ((ytlnonrot-yuas) *math.sin(yaw))+xuas
     yrotz = ((xtlnonrot-xuas)*math.sin(yaw))+((ytlnonrot-yuas)*math.cos(yaw))+yuas
-    zrotz = ztlnonrot
+    zrotz = 0
     # roll rotation of top left corner coordinates
     xrotzx = xrotz
     yrotzx = ((yrotz-yuas)*math.cos(roll))-((zrotz-zuas)*math.sin(roll))+yuas
@@ -50,6 +50,7 @@ def rotate3D(roll,pitch,yaw):
     return xrotzxy, yrotzxy, zrotzxy
 
 def rotateyaw(yaw):
+    # looks like it works
     # need to rotate points about the center of the drone, so pretend drone location is (0,0,0)
     # yaw rotation of top left corner coordinates
     cc_yaw = 360 - yaw
@@ -60,30 +61,49 @@ def rotateyaw(yaw):
 
     return xrotz, yrotz
 
-def rotateroll(roll):
+def rotatepitch(pitch):
+    # looks like it works
+    # pitch forward is negative, causing you to look backwards more
+    # pitch backwards is positive, causing you to look forwards more
     # need to rotate points about the center of the drone, so pretend drone location is (0,0,0)
     # roll rotation of top left corner coordinates
-    cc_roll = 360 - roll
-    cos_cc_roll = math.cos(math.radians(cc_roll))
-    sin_cc_roll = math.sin(math.radians(cc_roll))
-    xrotx = xtlnonrot
-    yrotx = cos_cc_roll *(ytlnonrot-yuas)- sin_cc_roll *(ztlnonrot-zuas)+yuas
-    zrotx = sin_cc_roll * (ytlnonrot-yuas)- cos_cc_roll * (ztlnonrot-zuas)+zuas
-
-    return xrotx, yrotx, zrotx
-
-def rotatepitch(pitch):
-    # need to rotate points about the center of the drone, so pretend drone location is (0,0,0)
-    # pitch rotation of top left corner coordinates
-    cc_pitch = 360 - pitch
+    cc_pitch = pitch
     radpitch = math.radians(cc_pitch)
     cos_cc_pitch = math.cos(radpitch)
     sin_cc_pitch = math.sin(radpitch)
+    xrotx = xtlnonrot
+    yrotx1 = cos_cc_pitch *(ytlnonrot-yuas)- sin_cc_pitch *(-altitude)+yuas
+    zrotx = sin_cc_pitch * (ytlnonrot-yuas)- cos_cc_pitch * (-altitude)+altitude
+    phi = 90 - abs(pitch)
+    phirad = math.radians(phi)
+    if pitch > 0:
+        yrotx = yrotx1 + (zrotx/tan(phirad))
+    else:
+        yrotx = yrotx1 - (zrotx/tan(phirad))
+
+    return xrotx, yrotx, zrotx
+
+def rotateroll(roll):
+    # looks like this works now
+    #an aircraft rolling right is positive, causing you too look more left
+    # rolling left is negative causing you to look more right
+    # need to rotate points about the center of the drone, so pretend drone location is (0,0,0)
+    # pitch rotation of top left corner coordinates
+    cc_roll = roll
+    cos_cc_roll = math.cos(math.radians(cc_roll))
+    sin_cc_roll = math.sin(math.radians(cc_roll))
         #xrotz  = cos_cc_yaw *(xtlnonrot-xuas)- sin_cc_yaw *(ytlnonrot-yuas)+xuas
         #yrotz = sin_cc_yaw *(xtlnonrot-xuas)+ cos_cc_yaw *(ytlnonrot-yuas)+yuas
-    xroty = sin_cc_pitch *(ztlnonrot-zuas)- cos_cc_pitch*(xtlnonrot-xuas)+xuas
+    xroty1 = sin_cc_roll *(-altitude)+ cos_cc_roll*(xtlnonrot-xuas)+xuas
     yroty = ytlnonrot
-    zroty = cos_cc_pitch *(ztlnonrot-zuas)- sin_cc_pitch*(xtlnonrot-xuas)+zuas
+    zroty = cos_cc_roll *(-altitude)- sin_cc_roll*(xtlnonrot-xuas)+altitude
+
+    phi = 90 - abs(roll)
+    phirad = math.radians(phi)
+    if roll > 0:
+        xroty = xroty1 - (zroty/tan(phirad))
+    else:
+        xroty = xroty1 +(zroty/tan(phirad))
 
     return xroty, yroty, zroty
 
@@ -112,37 +132,37 @@ ztlnonrot = surfel
 
 #resulting rotated coordinates
 print 'changing roll'
-while r <= 360:
+while r >= -80:
     xyzrot = rotateroll(r)
     print xyzrot[0]
-    r = r + 10
+    r = r - 10
 
 r = 0
-while r <= 360:
+while r >= -80:
     xyzrot = rotateroll(r)
     print xyzrot[1]
-    r = r + 10
+    r = r - 10
 
 print 'changing pitch'
-while p <= 360:
+while p >= -80:
     xyzrot = rotatepitch(p)
     print xyzrot[0]
-    p = p + 10
+    p = p - 10
 
 p = 0
-while p <= 360:
+while p >= -80:
     xyzrot = rotatepitch(p)
     print xyzrot[1]
-    p = p + 10
+    p = p - 10
 
 print 'changing yaw'
-while y <= 360:
+while y >= -80:
     xyzrot = rotateyaw(y)
-    y = y + 10
+    y = y - 10
     print xyzrot[0]
 
 y = 0
-while y <= 360:
+while y >= -80:
     xyzrot = rotateyaw(y)
-    y = y + 10
+    y = y - 10
     print xyzrot[1]
