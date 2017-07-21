@@ -67,19 +67,25 @@ def rotatepitch(pitch):
     # pitch backwards is positive, causing you to look forwards more
     # need to rotate points about the center of the drone, so pretend drone location is (0,0,0)
     # roll rotation of top left corner coordinates
-    cc_pitch = pitch
+    cc_pitch = abs(pitch)
     radpitch = math.radians(cc_pitch)
     cos_cc_pitch = math.cos(radpitch)
     sin_cc_pitch = math.sin(radpitch)
+
     xrotx = xtlnonrot
-    yrotx1 = cos_cc_pitch *(ytlnonrot-yuas)- sin_cc_pitch *(-altitude)+yuas
-    zrotx = sin_cc_pitch * (ytlnonrot-yuas)- cos_cc_pitch * (-altitude)+altitude
+    if pitch <0:
+        yrotx1 = yuas - cos_cc_pitch *(ytlnonrot-yuas)- sin_cc_pitch *(-altitude)
+        zrotx = sin_cc_pitch * (ytlnonrot-yuas)- cos_cc_pitch * (-altitude)+altitude
+    else:
+        yrotx1 = cos_cc_pitch *(ytlnonrot-yuas)- sin_cc_pitch *(-altitude)+yuas
+        zrotx = sin_cc_pitch * (ytlnonrot-yuas)- cos_cc_pitch * (-altitude)+altitude
+
     phi = 90 - abs(pitch)
     phirad = math.radians(phi)
     if pitch > 0:
-        yrotx = yrotx1 + (zrotx/tan(phirad))
+        yrotx = yrotx1 + (zrotx/math.tan(phirad))
     else:
-        yrotx = yrotx1 - (zrotx/tan(phirad))
+        yrotx = yrotx1 - (zrotx/math.tan(phirad))
 
     return xrotx, yrotx, zrotx
 
@@ -89,28 +95,33 @@ def rotateroll(roll):
     # rolling left is negative causing you to look more right
     # need to rotate points about the center of the drone, so pretend drone location is (0,0,0)
     # pitch rotation of top left corner coordinates
-    cc_roll = roll
+    cc_roll = abs(roll)
     cos_cc_roll = math.cos(math.radians(cc_roll))
     sin_cc_roll = math.sin(math.radians(cc_roll))
         #xrotz  = cos_cc_yaw *(xtlnonrot-xuas)- sin_cc_yaw *(ytlnonrot-yuas)+xuas
         #yrotz = sin_cc_yaw *(xtlnonrot-xuas)+ cos_cc_yaw *(ytlnonrot-yuas)+yuas
-    xroty1 = sin_cc_roll *(-altitude)+ cos_cc_roll*(xtlnonrot-xuas)+xuas
-    yroty = ytlnonrot
-    zroty = cos_cc_roll *(-altitude)- sin_cc_roll*(xtlnonrot-xuas)+altitude
+    if roll <0:
+        xroty1 = xuas - sin_cc_roll *(-altitude)+ cos_cc_roll*(xtlnonrot-xuas)
+        yroty = ytlnonrot
+        zroty = cos_cc_roll *(-altitude)- sin_cc_roll*(xtlnonrot-xuas)+altitude
+    else:
+        xroty1 = sin_cc_roll *(-altitude)+ cos_cc_roll*(xtlnonrot-xuas)+xuas
+        yroty = ytlnonrot
+        zroty = cos_cc_roll *(-altitude)- sin_cc_roll*(xtlnonrot-xuas)+altitude
 
     phi = 90 - abs(roll)
     phirad = math.radians(phi)
     if roll > 0:
-        xroty = xroty1 - (zroty/tan(phirad))
+        xroty = xroty1 - (zroty/math.tan(phirad))
     else:
-        xroty = xroty1 +(zroty/tan(phirad))
+        xroty = xroty1 +(zroty/math.tan(phirad))
 
     return xroty, yroty, zroty
 
 
-r = 0
-p = 0
-y = 0
+r = 80
+p = 80
+y = 80
 #coordinates for UAS in UTM taken from Barren Ricoh
 xuas = 827106.3613
 yuas = 649895.2486
@@ -137,7 +148,7 @@ while r >= -80:
     print xyzrot[0]
     r = r - 10
 
-r = 0
+r = 80
 while r >= -80:
     xyzrot = rotateroll(r)
     print xyzrot[1]
@@ -149,7 +160,7 @@ while p >= -80:
     print xyzrot[0]
     p = p - 10
 
-p = 0
+p = 80
 while p >= -80:
     xyzrot = rotatepitch(p)
     print xyzrot[1]
@@ -161,7 +172,7 @@ while y >= -80:
     y = y - 10
     print xyzrot[0]
 
-y = 0
+y = 80
 while y >= -80:
     xyzrot = rotateyaw(y)
     y = y - 10
