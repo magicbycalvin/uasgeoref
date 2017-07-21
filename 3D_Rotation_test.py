@@ -29,6 +29,7 @@ import math
 # vectorxyz = np.array([x,y,z])
 # rot_value = np.dot(vectorxyz,eulerAnglesToRotationMatrix(theta))
 
+
 # defining function for 3D rotation of pixel location
 #currently this will just be for calculating the topleft corner but eventually this will be used to rotate the location of every pixel
 def rotate3D(xuas,yuas,zuas,imwidg,imheig,surfel,roll,pitch,yaw):
@@ -51,6 +52,45 @@ def rotate3D(xuas,yuas,zuas,imwidg,imheig,surfel,roll,pitch,yaw):
     zrotzxy = ((zrotzx-zuas)*math.cos(pitch))-((xrotzx-xuas)*math.sin(pitch))+zuas
 
     return xrotzxy, yrotzxy, zrotzxy
+
+def rotateyaw(xuas,yuas,zuas,imwidg,imheig,surfel,yaw):
+    # non-rotated xyz of top left corner of image
+    xtlnonrot = xuas - (imwidg/2)
+    ytlnonrot =  yuas + (imheig/2)
+    ztlnonrot = surfel
+    # need to rotate points about the center of the drone, so pretend drone location is (0,0,0)
+    # yaw rotation of top left corner coordinates
+    xrotz = ((xtlnonrot-xuas)  * math.cos(yaw)) - ((ytlnonrot-yuas) *math.sin(yaw))+xuas
+    yrotz = ((xtlnonrot-xuas)*math.sin(yaw))+((ytlnonrot-yuas)*math.cos(yaw))+yuas
+    zrotz = ztlnonrot
+
+    return xrotz, yrotz, zrotz
+
+def rotateroll(xuas,yuas,zuas,imwidg,imheig,surfel,roll):
+    # non-rotated xyz of top left corner of image
+    xtlnonrot = xuas - (imwidg/2)
+    ytlnonrot =  yuas + (imheig/2)
+    ztlnonrot = surfel
+    # need to rotate points about the center of the drone, so pretend drone location is (0,0,0)
+    # roll rotation of top left corner coordinates
+    xrotx = xtlnonrot
+    yrotx = ((ytlnonrot-yuas)*math.cos(roll))-((ztlnonrot-zuas)*math.sin(roll))+yuas
+    zrotx = ((ytlnonrot-yuas)*math.sin(roll))-((ztlnonrot-zuas)*math.cos(roll))+zuas
+
+    return xrotx, yrotx, zrotx
+
+def rotatepitch(xuas,yuas,zuas,imwidg,imheig,surfel,pitch):
+    # non-rotated xyz of top left corner of image
+    xtlnonrot = xuas - (imwidg/2)
+    ytlnonrot =  yuas + (imheig/2)
+    ztlnonrot = surfel
+    # need to rotate points about the center of the drone, so pretend drone location is (0,0,0)
+    # pitch rotation of top left corner coordinates
+    xroty = ((ztlnonrot-zuas)*math.sin(pitch))-((xtlnonrot-xuas)*math.cos(pitch))+xuas
+    yroty = ytlnonrot
+    zroty = ((ztlnonrot-zuas)*math.cos(pitch))-((xtlnonrot-xuas)*math.sin(pitch))+zuas
+
+    return xroty, yroty, zroty
 
 
 r = 0
@@ -80,7 +120,7 @@ while r <= 360:
     roll = np.deg2rad(r)
     pitch = np.deg2rad(p)
     yaw = np.deg2rad(y)
-    xyzrot = rotate3D(xuas,yuas,zuas,imwidg,imheig,surfel,roll,pitch,yaw)
+    xyzrot = rotateroll(xuas,yuas,zuas,imwidg,imheig,surfel,roll)
     print xyzrot[0]
     r = r + 10
 
@@ -92,7 +132,7 @@ while r <= 360:
     roll = np.deg2rad(r)
     pitch = np.deg2rad(p)
     yaw = np.deg2rad(y)
-    xyzrot = rotate3D(xuas,yuas,zuas,imwidg,imheig,surfel,roll,pitch,yaw)
+    xyzrot = rotateroll(xuas,yuas,zuas,imwidg,imheig,surfel,roll)
     print xyzrot[1]
     r = r + 10
 
@@ -103,7 +143,7 @@ while p <= 360:
     roll = np.deg2rad(r)
     pitch = np.deg2rad(p)
     yaw = np.deg2rad(y)
-    xyzrot = rotate3D(xuas,yuas,zuas,imwidg,imheig,surfel,roll,pitch,yaw)
+    xyzrot = rotatepitch(xuas,yuas,zuas,imwidg,imheig,surfel,pitch)
     print xyzrot[0]
     p = p + 10
 
@@ -114,7 +154,7 @@ while p <= 360:
     roll = np.deg2rad(r)
     pitch = np.deg2rad(p)
     yaw = np.deg2rad(y)
-    xyzrot = rotate3D(xuas,yuas,zuas,imwidg,imheig,surfel,roll,pitch,yaw)
+    xyzrot = rotatepitch(xuas,yuas,zuas,imwidg,imheig,surfel,pitch)
     print xyzrot[1]
     p = p + 10
 
@@ -126,7 +166,7 @@ while y <= 360:
     roll = np.deg2rad(r)
     pitch = np.deg2rad(p)
     yaw = np.deg2rad(y)
-    xyzrot = rotate3D(xuas,yuas,zuas,imwidg,imheig,surfel,roll,pitch,yaw)
+    xyzrot = rotateyaw(xuas,yuas,zuas,imwidg,imheig,surfel,yaw)
     print xyzrot[0]
 
 y = 0
@@ -137,5 +177,5 @@ while y <= 360:
     roll = np.deg2rad(r)
     pitch = np.deg2rad(p)
     yaw = np.deg2rad(y)
-    xyzrot = rotate3D(xuas,yuas,zuas,imwidg,imheig,surfel,roll,pitch,yaw)
+    xyzrot = rotateyaw(xuas,yuas,zuas,imwidg,imheig,surfel,yaw)
     print xyzrot[1]
