@@ -26,15 +26,15 @@ start.mainloop()
 #LatLong- UTM conversion..h
 #definitions for lat/long to UTM and UTM to lat/lng conversions
 #include <string.h>
-    
+
 _deg2rad = pi / 180.0
 _rad2deg = 180.0 / pi
-    
+
 _EquatorialRadius = 2
 _eccentricitySquared = 3
-    
+
 _ellipsoid = [
-#  id, Ellipsoid name, Equatorial Radius, square of eccentricity	
+#  id, Ellipsoid name, Equatorial Radius, square of eccentricity
 # first once is a placeholder only, To allow array indices to match id numbers
 [ -1, "Placeholder", 0, 0],
 [ 1, "Airy", 6377563, 0.00667054],
@@ -61,84 +61,84 @@ _ellipsoid = [
 [ 22, "WGS-72", 6378135, 0.006694318],
 [ 23, "WGS-84", 6378137, 0.00669438]
     ]
-    
-#Reference ellipsoids derived from Peter H. Dana's website- 
+
+#Reference ellipsoids derived from Peter H. Dana's website-
 #http://www.utexas.edu/depts/grg/gcraft/notes/datum/elist.html
 #Department of Geography, University of Texas at Austin
 #Internet: pdana@mail.utexas.edu
 #3/22/95
-    
+
 #Source
 #Defense Mapping Agency. 1987b. DMA Technical Report: Supplement to Department of Defense World Geodetic System
 #1984 Technical Report. Part I and II. Washington, DC: Defense Mapping Agency
-    
-#def LLtoUTM(int ReferenceEllipsoid, const double Lat, const double Long, 
+
+#def LLtoUTM(int ReferenceEllipsoid, const double Lat, const double Long,
 #double &UTMNorthing, double &UTMEasting, char* UTMZone)
-    
+
 #convert lat long to UTM
 #code from http://robotics.ai.uiuc.edu/~hyoon24/LatLongUTMconversion.py
-    
+
 def LLtoUTM(ReferenceEllipsoid, Lat, Long):
-    #converts lat/long to UTM coords.  Equations from USGS Bulletin 1532 
-    #East Longitudes are positive, West longitudes are negative. 
+    #converts lat/long to UTM coords.  Equations from USGS Bulletin 1532
+    #East Longitudes are positive, West longitudes are negative.
     #North latitudes are positive, South latitudes are negative
     #Lat and Long are in decimal degrees
     #Written by Chuck Gantz- chuck.gantz@globalstar.com
-    
+
     a = _ellipsoid[ReferenceEllipsoid][_EquatorialRadius]
     eccSquared = _ellipsoid[ReferenceEllipsoid][_eccentricitySquared]
     k0 = 0.9996
-    
+
     #Make sure the longitude is between -180.00 .. 179.9
     LongTemp = (Long+180)-int((Long+180)/360)*360-180 # -180.00 .. 179.9
-    
+
     LatRad = Lat*_deg2rad
     LongRad = LongTemp*_deg2rad
-    
+
     ZoneNumber = int((LongTemp + 180)/6) + 1
-      
+
     if Lat >= 56.0 and Lat < 64.0 and LongTemp >= 3.0 and LongTemp < 12.0:
         ZoneNumber = 32
-    
+
         # Special zones for Svalbard
     if Lat >= 72.0 and Lat < 84.0:
         if  LongTemp >= 0.0  and LongTemp <  9.0:ZoneNumber = 31
         elif LongTemp >= 9.0  and LongTemp < 21.0: ZoneNumber = 33
         elif LongTemp >= 21.0 and LongTemp < 33.0: ZoneNumber = 35
         elif LongTemp >= 33.0 and LongTemp < 42.0: ZoneNumber = 37
-    
+
     LongOrigin = (ZoneNumber - 1)*6 - 180 + 3 #+3 puts origin in middle of zone
     LongOriginRad = LongOrigin * _deg2rad
-    
+
         #compute the UTM Zone from the latitude and longitude
     UTMZone = "%d%c" % (ZoneNumber, _UTMLetterDesignator(Lat))
-    
+
     eccPrimeSquared = (eccSquared)/(1-eccSquared)
     N = a/sqrt(1-eccSquared*sin(LatRad)*sin(LatRad))
     T = tan(LatRad)*tan(LatRad)
     C = eccPrimeSquared*cos(LatRad)*cos(LatRad)
     A = cos(LatRad)*(LongRad-LongOriginRad)
-    
+
     M = a*((1- eccSquared/4- 3*eccSquared*eccSquared/64- 5*eccSquared*eccSquared*eccSquared/256)*LatRad - (3*eccSquared/8+ 3*eccSquared*eccSquared/32+ 45*eccSquared*eccSquared*eccSquared/1024)*sin(2*LatRad) + (15*eccSquared*eccSquared/256 + 45*eccSquared*eccSquared*eccSquared/1024)*sin(4*LatRad) - (35*eccSquared*eccSquared*eccSquared/3072)*sin(6*LatRad))
-        
+
     UTMEasting = (k0*N*(A+(1-T+C)*A*A*A/6 + (5-18*T+T*T+72*C-58*eccPrimeSquared)*A*A*A*A*A/120)+ 500000.0)
-    
+
     UTMNorthing = (k0*(M+N*tan(LatRad)*(A*A/2+(5-T+9*C+4*C*C)*A*A*A*A/24 + (61 -58*T +T*T +600*C -330*eccPrimeSquared)*A*A*A*A*A*A/720)))
-    
+
     if Lat < 0:
         UTMNorthing = UTMNorthing + 10000000.0; #10000000 meter offset for southern hemisphere
     return (UTMZone, UTMEasting, UTMNorthing)
-    
-    
+
+
 def _UTMLetterDesignator(Lat):
     #This routine determines the correct UTM letter designator for the given latitude
     #returns 'Z' if latitude is outside the UTM limits of 84N to 80S
     #Written by Chuck Gantz- chuck.gantz@globalstar.com
-    
+
     if  Lat >= 0: return 'N'
     elif Lat < 0: return 'S'
     else: return 'Z'	# if the Latitude is outside the UTM limits
-        
+
 def take():
     #retrieving user input values from tkinter GUI
     file_path = e1.get()
@@ -156,8 +156,9 @@ def take():
     #remove values after user hits "enter"
 
     import exifread
+    import exiftool
     import os
-    
+
     for filename in os.listdir(file_path):
         name = filename
         os.chdir(file_path)
@@ -166,24 +167,31 @@ def take():
         imwidp1 = tags['EXIF ExifImageWidth']
         imwidp2 = str(imwidp1)
         im_wid_p = float(imwidp2)
-    
+
         imheip1 = tags['EXIF ExifImageLength']
         imheip2 = str(imheip1)
         im_hei_p = float(imheip2)
-    
+
         fl1 = tags['EXIF FocalLength']
         fl2 = repr(fl1)
         fl3 = fl2.split('=')
         fl4 = fl3[1]
         fl5 = fl4.split('/')
         focal_length = float(fl5[0])/10
-    
+
         f1 = tags['EXIF FocalLengthIn35mmFilm']
         f2 = str(f1)
         f3 = float(f2)
 
         pix_size_cam = f3/(math.sqrt((im_wid_p**2)+(im_hei_p**2)))
-        
+
+        # retrieving Roll and Pitch Values
+        with exiftool.ExifTool()as et:
+            roll = et.get_tag('EXIF:GPSRoll',filename)
+
+        with exiftool.ExifTool() as et:
+            pitch = et.get_tag('EXIF:GPSPitch',filename)
+
         # retrieving latitude info from EXIF, converting to dec degrees
         if not 'GPS GPSLatitude' in tags:
             lat_cent = 'x'
@@ -205,7 +213,7 @@ def take():
                 lat_cent = float(-1) * (lat_cent_deg + ((lat_cent_min + (lat_cent_sec/float(60)))/float(60)))
             elif lat_sign == 'N':
                 lat_cent = lat_cent_deg + ((lat_cent_min + (lat_cent_sec/float(60)))/float(60))
-            
+
         # retrieving longitude info from EXIF,converting to dec degrees
         if not 'GPS GPSLongitude' in tags:
             long_cent = 'x'
@@ -227,12 +235,12 @@ def take():
                 long_cent = float(-1) * (long_cent_deg + ((long_cent_min + (long_cent_sec/float(60)))/float(60)))
             elif long_sign == 'E' :
                 long_cent = long_cent_deg + ((long_cent_min + (long_cent_sec/float(60)))/float(60))
-        
-        # retrieving orientation info 
+
+        # retrieving orientation info
         if not 'GPS GPSImgDirection' in tags:
             yaw = 'x'
             print filename + ' has no orienation information!'
-        else: 
+        else:
             yaw1 = str(tags['GPS GPSImgDirection'])
             yaw2 = yaw1.split('/')
             lenyaw = len(yaw2)
@@ -244,12 +252,28 @@ def take():
                 yaw = (yaw5/yaw6) + float(magdec)
             else:
                 yaw = float(yaw2[0])
-    
+
+        if not 'GPS GPSImgDirection' in tags:
+            yaw = 'x'
+            print filename + ' has no orienation information!'
+        else:
+            yaw1 = str(tags['GPS GPSImgDirection'])
+            yaw2 = yaw1.split('/')
+            lenyaw = len(yaw2)
+            if lenyaw == 2:
+                yaw3 = yaw2[0]
+                yaw4 =yaw2[1]
+                yaw5 = float(yaw3)
+                yaw6 = float(yaw4)
+                yaw = (yaw5/yaw6) + float(magdec)
+            else:
+                yaw = float(yaw2[0])
+
         #looping through images and generating .jpw, .prj and .aux.xml files for each image
         #first determine if proper spatial information exists
         if lat_cent == 'x' or long_cent == 'x' or yaw == 'x':
             print 'Files will not be generated for ' + filename
-        else: 
+        else:
             utm_coords = LLtoUTM(23, lat_cent, long_cent)
             #pixel size on the ground
             pix_size_ground = (float(pix_size_cam) * float(zvalue))/(float(focal_length)/float(100))
@@ -279,7 +303,7 @@ def take():
             #UTM coordinates for top left corner (c,f)
             C = cos_cc_yaw *(x_nonrot-x_cent)- sin_cc_yaw *(y_nonrot-y_cent)+x_cent
             F = sin_cc_yaw *(x_nonrot-x_cent)+ cos_cc_yaw *(y_nonrot-y_cent)+y_cent
-    
+
             #projection and wkt codes for every UTM zone
             if utm_coords[0]=='1N':
                 project = 'PROJCS["WGS_1984_UTM_Zone_1N",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",-177],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",0],UNIT["Meter",1]]'
@@ -521,9 +545,9 @@ def take():
                 project ='PROJCS["WGS_1984_UTM_Zone_59S",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",171],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",10000000],UNIT["Meter",1]]'
             elif utm_coords[0]=='60S':
                 project ='PROJCS["WGS_1984_UTM_Zone_60S",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",177],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",10000000],UNIT["Meter",1]]'
-           
+
             aux = '<PAMDataset> <SRS>' + project + '</SRS> </PAMDataset>'
-            
+
             #generating jpw files and writing them
             new_file = open(save_path+'/'+name[:-4]+'.jpgw', 'a')
             new_file.close()
@@ -553,7 +577,7 @@ def take():
             new_file_aux2.write(str(aux))
             new_file_aux2.close()
     return
-    
+
 master = Tk()
 master.title("Georeference your UAS photos!")
 Label(master, text="Images folder path:").grid(row=1)
@@ -576,6 +600,5 @@ e4.grid(row=7, column=1)
 
 Button(master, text='Quit', command=master.quit).grid(row=9, column=0, sticky=W, pady=4)
 Button(master, text='Enter', command=take).grid(row=9, column=1, sticky=W, pady=4)
- 
-mainloop( )
 
+mainloop( )
