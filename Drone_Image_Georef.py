@@ -214,6 +214,11 @@ def take():
             focal_length = 18.3
             im_wid_p = 4928
             im_hei_p = 3264
+        elif camera == 'FLIR Vue Pro R 13 mm':
+            pix_size_cam = 0.017
+            focal_length = 13
+            im_wid_p = 640
+            im_hei_p = 512
         # reading camera info from exif
         elif camera == 'Other':
             f = open(image_path,'rb')
@@ -567,9 +572,9 @@ def take():
         aux = '<PAMDataset> <SRS>' + project + '</SRS> </PAMDataset>'
 
         #generating jpw files and writing them
-        new_file = open(save_path+'/'+name[:-11]+'.jpgw', 'a')
+        new_file = open(save_path+'/'+name[:-4]+'.jpgw', 'a')
         new_file.close()
-        new_file2 = open(save_path+'/'+name[:-11]+'.jpgw','w')
+        new_file2 = open(save_path+'/'+name[:-4]+'.jpgw','w')
         new_file2.write(str(A))
         new_file2.write("\n")
         new_file2.write(str(D))
@@ -583,15 +588,15 @@ def take():
         new_file2.write(str(F))
         new_file2.close()
         #generating .prj files for GlobalMapper
-        new_file_prj = open(save_path+'/'+name[:-11]+'.prj','a')
+        new_file_prj = open(save_path+'/'+name[:-4]+'.prj','a')
         new_file.close()
-        new_file_prj2 = open(save_path+'/'+name[:-11]+'.prj','w')
+        new_file_prj2 = open(save_path+'/'+name[:-4]+'.prj','w')
         new_file_prj2.write(str(project))
         new_file_prj2.close()
         #generating .aux.xml files for ArcMap and QGIS
-        new_file_aux = open(save_path+'/'+name[:-11]+'.JPG.aux.xml','a')
+        new_file_aux = open(save_path+'/'+name[:-4]+'.JPG.aux.xml','a')
         new_file_aux.close()
-        new_file_aux2 = open(save_path+'/'+name[:-11]+'.JPG.aux.xml','w')
+        new_file_aux2 = open(save_path+'/'+name[:-4]+'.JPG.aux.xml','w')
         new_file_aux2.write(str(aux))
         new_file_aux2.close()
         #looping through while loop
@@ -643,7 +648,7 @@ tkvar2.trace('w', change_dropdown)
 tkvar = StringVar(master)
 
 # Dictionary with options
-choices = { 'Ricoh GR I & II','GoPro Hero 4','MicaSense RedEdge 3', 'SonyA7R', 'Other'}
+choices = { 'Ricoh GR I & II','GoPro Hero 4','MicaSense RedEdge 3', 'SonyA7R', 'FLIR Vue Pro R 13 mm', 'Other'}
 tkvar.set('Ricoh GR I & II') # set the default option
 
 popupMenu = OptionMenu(master, tkvar, *choices)

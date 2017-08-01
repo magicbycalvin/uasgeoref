@@ -7,8 +7,8 @@ def map2pixel(mx,my,gt):
     Only works for geotransforms with no rotation.
     """
 
-    px = int((mx - gt[0]) / gt[1]) #x pixel
-    py = int((my - gt[3]) / gt[5]) #y pixel
+    px = int((mx - gt[0])/gt[1]) #x pixel
+    py = int((my - gt[3])/gt[5]) #y pixel
 
     return px,py
 
@@ -21,4 +21,5 @@ rb=src_ds.GetRasterBand(1)
 x=-105.11266585284145
 y=39.714089
 px,py=map2pixel(x,y,gt)
-val = rb.ReadAsArray(px,py,1,1)
+val = rb.ReadAsArray()
+groundheight = val[py,px]

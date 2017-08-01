@@ -1,0 +1,1 @@
+gpsbabel -t -i navitel_trk -f 99.BIN -o gpx -F 99.gpx
