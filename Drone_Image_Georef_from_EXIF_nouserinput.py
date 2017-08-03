@@ -1,26 +1,36 @@
-#This code only works for nadir images with square pixels
-#Export camera data from PhotoScan
-#after the JPW files area generated you need to copy and paste them in the same folder as your jpg files
-#before you import your jpgs into ArcMap, under the view option at the top click "data frame properties" and set the coordinate system to NAD_1983_UTM_Zone_whatever the zone for your study area is
-#you can apply a projection to the images using the Define Projection tool and setting the projection to NAD1983 UTM
-#after you define the projection for the image you must then project the image using the Project Raster tool
+#This program generates world files and projection files for viewing individual UAS photos (.JPEG) with GIS programs in the generally
+#correct location/orientation.
 
-from Tkinter import *
+#This program only works for nadir UAS images with square pixels.
+#This program will only work for photos taken within North America - see map here: https://dds.cr.usgs.gov/srtm/version2_1/Documentation/Continent_def.gif
+#unless a DEM for the area (in the form of a geotiff, such as that produced from PhotoScan) is placed in the directory \DEM\Other
+#or an strm .hgt for the region is placed in the directory \DEM\STRM3.
+#Camera and drone must be time-synced before the UAS flight otherwise the photos may be improperly geotagged.
 
-import numpy
+#To use this program place your non-geotagged or previously geotagged images in the directory \Images\PutImagesHere.
+#Get your corresponding dataflash log files (.BIN) off of the aircraft, convert put your .BIN files to .BIN.gpx files in Mission Planner.
+#Place your .BIN.gpx files in the directory \GPXs.
+#If you already have geotagged your images previously, the previous step is not neccessary.
+#Run the code uasgeoref.py and a new folder will be generated for your original photos: \Images\Originals\date, geotagged photos: \Images\Geotagged\date,
+#gpx files: \GPX\Done\date, jpgw files: \World_Files\date, prj files \PRJs\date, aux.xml files \AUXXMLs\date.
+#Copy the jpgw, prj, aux.xml and geotagged jpgs into a single folder outside of this program.
+
+#Any questions in regards to this program please email: kmason@usgs.gov or uas.usgs.gov
+
+
+from math import pi, sin, cos, tan, sqrt
+import numpy as np
 import math
 from decimal import *
 from PIL import ImageTk, Image
 import os
-
+import geomag
 from math import pi, sin, cos, tan, sqrt
-
-start = Tk()
-Label(start, text="Let's georeference your photos! \nMake sure your photos are Geotagged and have EXIF values for location and orientation. \nThis program also requires an average flight altitude which can be entered based on altitude set for flight plan or found in the PhotoScan Processing Report. ",wraplength=300, justify = LEFT).grid(row=0)
-
-Button(start, text='Next', command=start.quit).grid(row=5, column=0, sticky=W, pady=4)
-
-start.mainloop()
+import os
+import time
+import utm
+from osgeo import gdal,ogr
+import json
 
 
 #LatLong- UTM conversion..h
@@ -139,29 +149,136 @@ def _UTMLetterDesignator(Lat):
     elif Lat < 0: return 'S'
     else: return 'Z'	# if the Latitude is outside the UTM limits
 
-def take():
-    #retrieving user input values from tkinter GUI
-    file_path = e1.get()
-    #where folder with photos are
-    save_path = e4.get()
-    #where files will be saved
-    zvalue = e2.get()
-    #average height above ground for flight
-    magdec = e3.get()
-    #magnetic declination
-    e1.delete(0,END)
-    e2.delete(0,END)
-    e3.delete(0,END)
-    e4.delete(0,END)
-    #remove values after user hits "enter"
+# where code is located
+path = str(os.path.dirname(os.path.abspath(__file__)))
+#path names for saving and moving files
+date = time.strftime("%B") + time.strftime("%d%Y")
+name = date
+num = 1
+originalspath = os.path.join(path, 'Images\Originals')
+while os.path.exists(originalspath + '/' + name):
+    name = name.split('_')
+    name = str(name[0]) + '_' + str(num)
+    num = num + 1
+DEM_path = os.path.join(path,'DEM\STRM3')
+file_path = os.path.join(path,'Images\PutImagesHere')
+originals = os.path.join(path, 'Images\Originals',name)
+geotagged = os.path.join(path,'Images\Geotagged',name)
+geotaggedpath = os.path.join(path,'Images\Geotagged')
+gpxpath = os.path.join(path, 'GPXs')
+gpxdone = os.path.join(gpxpath,'Done',name)
+gpxdonepath = os.path.join(gpxpath,'Done')
+jpwpath = os.path.join(path, 'JPGWs')
+save_path_jpw = os.path.join(path,'JPGWs', name)
+prjpath = os.path.join(path, 'PRJs')
+save_path_prj = os.path.join(path,'PRJs', name)
+auxpath = os.path.join(path, 'AUXXMLs')
+save_path_aux = os.path.join(path,'AUXXMLs', name)
 
+#creating folders
+os.chdir(originalspath)
+os.system('mkdir ' + name)
+os.chdir(gpxdonepath)
+os.system('mkdir ' + name)
+os.chdir(geotaggedpath)
+os.system('mkdir ' + name)
+os.chdir(jpwpath)
+os.system('mkdir ' + name)
+os.chdir(prjpath)
+os.system('mkdir ' + name)
+os.chdir(auxpath)
+os.system('mkdir ' + name)
+
+#exif tool command
+#change current directory to location of exif tool
+os.chdir(path)
+geotagcmd = 'exiftool -config .ExifTool_config -geotag "GPXs\*.BIN.gpx" "-geotime<${DateTimeOriginal}+00:00" Images\PutImagesHere'
+#run exiftool command
+os.system(geotagcmd)
+#remove orientation tag
+remorient = 'exiftool -Orientation= Images\PutImagesHere\*.JPG'
+os.system(remorient)
+
+#move originals to originals folder
+os.chdir(originals)
+movejpgscmd = 'copy ' + file_path + '\*.jpg_original'
+os.system(movejpgscmd)
+#rename originals to just .jpg
+os.system('rename *.jpg_original *.jpg')
+#delete originals from folder
+os.chdir(file_path)
+os.system('del *.jpg_original')
+# move geotagged to geotagged folder
+os.chdir(geotagged)
+movejpgscmd2 = 'copy ' + file_path + '\*.JPG'
+os.system(movejpgscmd2)
+#delete geotagged photos from folder
+os.chdir(file_path)
+os.system('del *.jpg')
+# move gpxs
+os.chdir(gpxdone)
+movegpxcmd = 'copy ' + gpxpath + '\*.BIN.gpx'
+os.system(movegpxcmd)
+# delete gpxs
+os.chdir(gpxpath)
+os.system('del *.BIN.gpx')
+
+def take():
     import exifread
     import exiftool
     import os
+    def get_elevation(lon, lat):
+        hgt_file = get_file_name(lon, lat)
+        if hgt_file:
+            return read_elevation_from_file(hgt_file, lon, lat)
+        # Treat it as data void as in SRTM documentation
+        # if file is absent
+        return -32768
 
-    for filename in os.listdir(file_path):
+    def read_elevation_from_file(hgt_file, lon, lat):
+        with open(hgt_file, 'rb') as hgt_data:
+            # HGT is 16bit signed integer(i2) - big endian(>)
+            elevations = np.fromfile(hgt_data, np.dtype('>i2'), -1).reshape((1201, 1201))
+            #elevations = np.fromfile(hgt_data, np.dtype('>i2'), SAMPLES*SAMPLES)\
+                                    #.reshape((SAMPLES, SAMPLES))
+
+            loncol = int(round(((math.ceil(abs(lon))) - abs(lon))*(1201-1)))
+            latrow = int(round(((math.ceil(abs(lat)))-abs(lat))*(1201-1)))
+            #lat_row = int(round((lat - int(lat)) * (SAMPLES - 1), 0))
+            #lon_row = int(round((lon - int(lon)) * (SAMPLES - 1), 0))
+
+            return elevations[latrow,loncol].astype(float)
+
+    def get_file_name(lon, lat):
+
+        if lat >= 0:
+            ns = 'N'
+        elif lat < 0:
+            ns = 'S'
+
+        if lon >= 0:
+            ew = 'E'
+        elif lon < 0:
+            ew = 'W'
+
+        namelat = str(int(math.floor(abs(lat))))
+
+        if int(math.ceil(abs(lon))) >= 100:
+            namelon = str(int(math.ceil(abs(lon))))
+        elif int(math.ceil(abs(lon))) <100:
+            namelon = str(0) + str(int(math.ceil(abs(lon))))
+
+        hgt_file = ns + namelat+ ew + namelon+'.hgt'
+        hgt_file_path = os.path.join(DEM_path, hgt_file)
+        if os.path.isfile(hgt_file_path):
+            return hgt_file_path
+        else:
+            return None
+
+
+    for filename in os.listdir(geotagged):
         name = filename
-        os.chdir(file_path)
+        os.chdir(geotagged)
         f = open(filename,'rb')
         tags = exifread.process_file(f, details=False)
         imwidp1 = tags['EXIF ExifImageWidth']
@@ -229,6 +346,35 @@ def take():
             elif long_sign == 'E' :
                 long_cent = long_cent_deg + ((long_cent_min + (long_cent_sec/float(60)))/float(60))
 
+        if long_cent == 'x' or lat_cent == 'x':
+            magdec = 'x'
+        else:
+            magdec = geomag.declination(lat_cent, long_cent)
+        #magnetic declination
+        if long_cent == 'x' or lat_cent == 'x':
+            groundheight = 'x'
+        else:
+            groundheight = get_elevation(long_cent, lat_cent)
+
+        #calculating zvalue
+        if not 'GPS GPSAltitude' in tags:
+            zvalue = 'x'
+            print filename + 'has no altitude information'
+        else:
+            z1 = str(tags['GPS GPSAltitude']).split('/')
+            lenz = len(z1)
+            if lenz == 2:
+                zvalue = float(z1[0])/float(z1[1])
+            else:
+                zvalue = float(z1[0])
+
+        #calculating AGL
+        if groundheight == -32768 or groundheight == -32767.0 or groundheight == 'x' or zvalue == 'x':
+            AGL = 'x'
+            print 'No elevation info exists for the location of ' + filename
+        else:
+            AGL = zvalue - groundheight
+
         # retrieving orientation info
         if not 'GPS GPSImgDirection' in tags:
             yaw = 'x'
@@ -242,18 +388,30 @@ def take():
                 yaw4 =yaw2[1]
                 yaw5 = float(yaw3)
                 yaw6 = float(yaw4)
-                yaw = (yaw5/yaw6) + float(magdec)
+                if str(tags['GPS GPSImgDirectionRef']) == 'T':
+                    yaw = yaw5/yaw6
+                elif str(tags['GPS GPSImgDirectionRef']) == 'M':
+                    yaw = (yaw5/yaw6) + float(magdec)
+                else:
+                    yaw = 'x'
+                    print filename + 'has no orientation reference information!'
             else:
-                yaw = float(yaw2[0])
+                if str(tags['GPS GPSImgDirectionRef']) == 'T':
+                    yaw = float(yaw2[0])
+                elif str(tags['GPS GPSImgDirectionRef']) == 'M':
+                    yaw = float(yaw2[0]) + float(magdec)
+                else:
+                    yaw = 'x'
+                    print filename + 'has no orientation reference information!'
 
         #looping through images and generating .jpw, .prj and .aux.xml files for each image
         #first determine if proper spatial information exists
-        if lat_cent == 'x' or long_cent == 'x' or yaw == 'x':
+        if lat_cent == 'x' or long_cent == 'x' or yaw == 'x' or AGL == 'x':
             print 'Files will not be generated for ' + filename
         else:
             utm_coords = LLtoUTM(23, lat_cent, long_cent)
             #pixel size on the ground
-            pix_size_ground = (float(pix_size_cam) * float(zvalue))/(float(focal_length)/float(100))
+            pix_size_ground = (float(pix_size_cam) * float(AGL))/(float(focal_length)/float(100))
             #image width on the ground
             im_wid_g = (float(im_wid_p) * float(pix_size_ground)) / float(100)
             #image height on the ground
@@ -526,9 +684,9 @@ def take():
             aux = '<PAMDataset> <SRS>' + project + '</SRS> </PAMDataset>'
 
             #generating jpw files and writing them
-            new_file = open(save_path+'/'+name[:-4]+'.jpgw', 'a')
+            new_file = open(save_path_jpw+'/'+name[:-4]+'.jpgw', 'a')
             new_file.close()
-            new_file2 = open(save_path+'/'+name[:-4]+'.jpgw','w')
+            new_file2 = open(save_path_jpw+'/'+name[:-4]+'.jpgw','w')
             new_file2.write(str(A))
             new_file2.write("\n")
             new_file2.write(str(D))
@@ -542,40 +700,19 @@ def take():
             new_file2.write(str(F))
             new_file2.close()
             #generating .prj files for GlobalMapper
-            new_file_prj = open(save_path+'/'+name[:-4]+'.prj','a')
+            new_file_prj = open(save_path_prj+'/'+name[:-4]+'.prj','a')
             new_file.close()
-            new_file_prj2 = open(save_path+'/'+name[:-4]+'.prj','w')
+            new_file_prj2 = open(save_path_prj+'/'+name[:-4]+'.prj','w')
             new_file_prj2.write(str(project))
             new_file_prj2.close()
             #generating .aux.xml files for ArcMap and QGIS
-            new_file_aux = open(save_path+'/'+name[:-4]+'.JPG.aux.xml','a')
+            new_file_aux = open(save_path_aux+'/'+name[:-4]+'.JPG.aux.xml','a')
             new_file_aux.close()
-            new_file_aux2 = open(save_path+'/'+name[:-4]+'.JPG.aux.xml','w')
+            new_file_aux2 = open(save_path_aux+'/'+name[:-4]+'.JPG.aux.xml','w')
             new_file_aux2.write(str(aux))
             new_file_aux2.close()
+
+
     return
 
-master = Tk()
-master.title("Georeference your UAS photos!")
-Label(master, text="Images folder path:").grid(row=1)
-Label(master, text='Flight Altitude(m):').grid(row=3)
-Label(master, text="Magnetic Declination:").grid(row=5)
-Label(master, text="Save path:").grid(row=7)
-
-
-e1 = Entry(master)
-e2 = Entry(master)
-e3 = Entry(master)
-e4 = Entry(master)
-
-
-e1.grid(row=1, column=1)
-e2.grid(row=3, column=1)
-e3.grid(row=5, column=1)
-e4.grid(row=7, column=1)
-
-
-Button(master, text='Quit', command=master.quit).grid(row=9, column=0, sticky=W, pady=4)
-Button(master, text='Enter', command=take).grid(row=9, column=1, sticky=W, pady=4)
-
-mainloop( )
+take()
