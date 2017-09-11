@@ -1,36 +1,40 @@
-#This program generates world files and projection files for viewing individual UAS photos (.JPEG) with GIS programs in the generally
-#correct location/orientation.
 
-#This program only works for nadir UAS images with square pixels.
-#This program will only work for photos taken within North America - see map here: https://dds.cr.usgs.gov/srtm/version2_1/Documentation/Continent_def.gif
-#unless a DEM for the area (in the form of a geotiff, such as that produced from PhotoScan) is placed in the directory \DEM\Other
-#or an strm .hgt for the region is placed in the directory \DEM\STRM3.
-#Camera and drone must be time-synced before the UAS flight otherwise the photos may be improperly geotagged.
+#This code only works for nadir images with square pixels
+#Export camera data from PhotoScan
+#save the JPW, PRJ and .aux.xml files to the same folder as your images
 
-#To use this program place your non-geotagged or previously geotagged images in the directory \Images\PutImagesHere.
-#Get your corresponding dataflash log files (.BIN) off of the aircraft, convert put your .BIN files to .BIN.gpx files in Mission Planner.
-#Place your .BIN.gpx files in the directory \GPXs.
-#If you already have geotagged your images previously, the previous step is not neccessary.
-#Run the code uasgeoref.py and a new folder will be generated for your original photos: \Images\Originals\date, geotagged photos: \Images\Geotagged\date,
-#gpx files: \GPX\Done\date, jpgw files: \World_Files\date, prj files \PRJs\date, aux.xml files \AUXXMLs\date.
-#Copy the jpgw, prj, aux.xml and geotagged jpgs into a single folder outside of this program.
+from Tkinter import *
 
-#Any questions in regards to this program please email: kmason@usgs.gov or uas.usgs.gov
-
-
-from math import pi, sin, cos, tan, sqrt
-import numpy as np
+import numpy
 import math
 from decimal import *
 from PIL import ImageTk, Image
 import os
-import geomag
+
 from math import pi, sin, cos, tan, sqrt
-import os
-import time
-import utm
-from osgeo import gdal,ogr
-import json
+
+# generating a GUI that gives directions on how to use code
+start = Tk()
+Label(start, text="Let's georeference your photos! \n 1) Generate a PhotoScan model with photos.",wraplength=300, justify = LEFT).grid(row=0)
+
+Button(start, text='Next', command=start.quit).grid(row=5, column=0, sticky=W, pady=4)
+
+start.mainloop()
+
+start2 = Tk()
+Label(start2, text=" \n 2) Under the Reference - Camera pane click the 'View Estimated' button on the top right, then click the 'Export' button and save your camera coordinates (coordinates may be in geographic or UTM - reference ellipsoid:WGS-84). If you did not use geotagged photos in PhotoScan you can still use the estimated camera locations in this program. \n 3) Be sure to choose Items: Cameras, Delimiter: Comma, and all Columns boxs checked.",wraplength=300, justify = LEFT).grid(row=0)
+
+Button(start2, text='Next', command=start2.quit).grid(row=50, column=0, sticky=W, pady=4)
+
+start2.mainloop()
+
+start3 = Tk()
+Label(start3, text="4) This program also requires an average flight altitude which can be entered based on altitude set for flight plan or found in the Processing Report on page 2 (File...Generate Report) ",wraplength=300, justify = LEFT).grid(row=0)
+
+
+Button(start3, text='Next', command=start3.quit).grid(row=5, column=0, sticky=W, pady=4)
+
+start3.mainloop()
 
 
 #LatLong- UTM conversion..h
@@ -149,84 +153,38 @@ def _UTMLetterDesignator(Lat):
     elif Lat < 0: return 'S'
     else: return 'Z'	# if the Latitude is outside the UTM limits
 
-# where code is located
-path = str(os.path.dirname(os.path.abspath(__file__)))
-#path names for saving and moving files
-date = time.strftime("%B") + time.strftime("%d%Y")
-name = date
-num = 1
-originalspath = os.path.join(path, 'Images\Originals')
-while os.path.exists(originalspath + '/' + name):
-    name = name.split('_')
-    name = str(name[0]) + '_' + str(num)
-    num = num + 1
-DEM_path = os.path.join(path,'DEM\STRM3')
-file_path = os.path.join(path,'Images\PutImagesHere')
-originals = os.path.join(path, 'Images\Originals',name)
-geotagged = os.path.join(path,'Images\Geotagged',name)
-geotaggedpath = os.path.join(path,'Images\Geotagged')
-gpxpath = os.path.join(path, 'GPXs')
-gpxdone = os.path.join(gpxpath,'Done',name)
-gpxdonepath = os.path.join(gpxpath,'Done')
-jpwpath = os.path.join(path, 'JPGWs')
-save_path_jpw = os.path.join(path,'JPGWs', name)
-prjpath = os.path.join(path, 'PRJs')
-save_path_prj = os.path.join(path,'PRJs', name)
-auxpath = os.path.join(path, 'AUXXMLs')
-save_path_aux = os.path.join(path,'AUXXMLs', name)
-
-#creating folders
-os.chdir(originalspath)
-os.system('mkdir ' + name)
-os.chdir(gpxdonepath)
-os.system('mkdir ' + name)
-os.chdir(geotaggedpath)
-os.system('mkdir ' + name)
-os.chdir(jpwpath)
-os.system('mkdir ' + name)
-os.chdir(prjpath)
-os.system('mkdir ' + name)
-os.chdir(auxpath)
-os.system('mkdir ' + name)
-
-#exif tool command
-#change current directory to location of exif tool
-os.chdir(path)
-geotagcmd = 'exiftool -config .ExifTool_config -geotag "GPXs\*.BIN.gpx" "-geotime<${DateTimeOriginal}+00:00" Images\PutImagesHere'
-#run exiftool command
-os.system(geotagcmd)
-#remove orientation tag
-remorient = 'exiftool -Orientation= Images\PutImagesHere\*.JPG'
-os.system(remorient)
-
-#move originals to originals folder
-os.chdir(originals)
-movejpgscmd = 'copy ' + file_path + '\*.jpg_original'
-os.system(movejpgscmd)
-#rename originals to just .jpg
-os.system('rename *.jpg_original *.jpg')
-#delete originals from folder
-os.chdir(file_path)
-os.system('del *.jpg_original')
-# move geotagged to geotagged folder
-os.chdir(geotagged)
-movejpgscmd2 = 'copy ' + file_path + '\*.JPG'
-os.system(movejpgscmd2)
-#delete geotagged photos from folder
-os.chdir(file_path)
-os.system('del *.jpg')
-# move gpxs
-os.chdir(gpxdone)
-movegpxcmd = 'copy ' + gpxpath + '\*.BIN.gpx'
-os.system(movegpxcmd)
-# delete gpxs
-os.chdir(gpxpath)
-os.system('del *.BIN.gpx')
-
+# This is where the meat of the code is
+# This function "take" is what generates the JPW, PRJ and AUX.XML files
 def take():
-    import exifread
-    import exiftool
-    import os
+
+    # assigning variables to the user inputs
+    # where the CSV file from PhotoScan is
+    file_path = e1.get()
+    # an image path if using EXIF data
+    image_path = e2.get()
+    # where files will be saved to
+    save_path = e3.get()
+    # flight height
+    DEM_path = e4.get()
+    # utm zone if coordinates are not in Lat Long
+    utmzone2 = e5.get()
+    # removing user input after they press enter
+    e1.delete(0,END)
+    e2.delete(0,END)
+    e3.delete(0,END)
+    e4.delete(0,END)
+    e5.delete(0,END)
+    # utm N or S
+    utmlett = tkvar4.get()
+    utmzone3 = utmzone2 + utmlett
+    # if user selects camera type
+    camera = tkvar.get()
+    # whether or not the coords are in lat long or UTM
+    lat_long = tkvar2.get()
+    # if the camera locations are geotagged or estimated by PhotoScan
+    # this decides what column of the csv file the location information for the cameras is taken from
+    cam_loc = tkvar3.get()
+
     def get_elevation(lon, lat):
         hgt_file = get_file_name(lon, lat)
         if hgt_file:
@@ -280,11 +238,73 @@ def take():
         else:
             return None
 
+    #importing EXIF data from image imported
+    import exifread
 
-    for filename in os.listdir(geotagged):
-        name = filename
-        os.chdir(geotagged)
-        f = open(filename,'rb')
+    # if the image path is empty this code will use the camera selected by the user or the default
+    if image_path == '':
+        f = 0
+        #Adding various cameras and parameters
+        if camera == 'GoPro Hero 4':
+            # how big a pixel is on the sensor in mm
+            pix_size_cam = 0.0017
+            # focal length in mm
+            focal_length = 3
+            # image width in pixels
+            im_wid_p = 4000
+            # image height in pixels
+            im_hei_p = 3000
+        elif camera == 'MicaSense RedEdge 3':
+            pix_size_cam = 0.0038
+            focal_length = 5.5
+            im_wid_p = 1280
+            im_hei_p = 960
+        elif camera == 'SonyA7R':
+            pix_size_cam = 0.0049
+            focal_length = 35
+            im_wid_p = 7360
+            im_hei_p = 4912
+        elif camera == 'Ricoh GR I & II':
+            pix_size_cam = 0.0048
+            focal_length = 18.3
+            im_wid_p = 160
+            im_hei_p = 120
+        elif camera == 'FLIR Vue Pro R 13 mm':
+            pix_size_cam = 0.017
+            focal_length = 13
+            im_wid_p = 640
+            im_hei_p = 512
+        # reading camera info from exif
+        elif camera == 'Other':
+            f = open(image_path,'rb')
+            # reading exif of image, generates a dictionary
+            tags = exifread.process_file(f, details=False)
+            # getting specific information from exif tags
+            imwidp1 = tags['EXIF ExifImageWidth']
+            # turning that information into a string
+            imwidp2 = str(imwidp1)
+            # turning that info into a float value
+            im_wid_p = float(imwidp2)
+
+            imheip1 = tags['EXIF ExifImageLength']
+            imheip2 = str(imheip1)
+            im_hei_p = float(imheip2)
+
+            fl1 = tags['EXIF FocalLength']
+            fl2 = repr(fl1)
+            fl3 = fl2.split('=')
+            fl4 = fl3[1]
+            fl5 = fl4.split('/')
+            focal_length = float(fl5[0])/10
+
+            f1 = tags['EXIF FocalLengthIn35mmFilm']
+            f2 = str(f1)
+            f3 = float(f2)
+
+            # calculating pixel size in the camera based on parameters
+            pix_size_cam = f3/(math.sqrt((im_wid_p**2)+(im_hei_p**2)))
+    else:
+        f = open(image_path,'rb')
         tags = exifread.process_file(f, details=False)
         imwidp1 = tags['EXIF ExifImageWidth']
         imwidp2 = str(imwidp1)
@@ -307,115 +327,41 @@ def take():
 
         pix_size_cam = f3/(math.sqrt((im_wid_p**2)+(im_hei_p**2)))
 
-        # retrieving latitude info from EXIF, converting to dec degrees
-        if not 'GPS GPSLatitude' in tags:
-            lat_cent = 'x'
-            print filename + ' has no Latitude information!'
-        else:
-            lat_cent1 = str(tags['GPS GPSLatitude'])
-            lat_cent2 = lat_cent1.split('[')
-            lat_cent3 = lat_cent2[1]
-            lat_cent4 = lat_cent3.split(']')
-            lat_cent5 = lat_cent4[0]
-            lat_cent6 = lat_cent5.split(',')
-            lat_cent_deg = float(lat_cent6[0])
-            lat_cent_min = float(lat_cent6[1])
-            lat_cent_sec1 = lat_cent6[2]
-            lat_cent_sec2 = lat_cent_sec1.split('/')
-            lat_cent_sec = float(lat_cent_sec2[0])/ float(lat_cent_sec2[1])
-            lat_sign = str(tags['GPS GPSLatitudeRef'])
-            if lat_sign == 'S':
-                lat_cent = float(-1) * (lat_cent_deg + ((lat_cent_min + (lat_cent_sec/float(60)))/float(60)))
-            elif lat_sign == 'N':
-                lat_cent = lat_cent_deg + ((lat_cent_min + (lat_cent_sec/float(60)))/float(60))
+    #Accounting for estimated coordinates vs. geotagged coordinates
+    if cam_loc == 'Estimated':
+        xx = 16
+        yy = 17
+    else:
+        xx = 1
+        yy = 2
 
-        # retrieving longitude info from EXIF,converting to dec degrees
-        if not 'GPS GPSLongitude' in tags:
-            long_cent = 'x'
-            print filename + ' has no Longitude information!'
-        else:
-            long_cent1 = str(tags['GPS GPSLongitude'])
-            long_cent2 = long_cent1.split('[')
-            long_cent3 = long_cent2[1]
-            long_cent4 = long_cent3.split(']')
-            long_cent5 = long_cent4[0]
-            long_cent6 = long_cent5.split(',')
-            long_cent_deg = float(long_cent6[0])
-            long_cent_min = float(long_cent6[1])
-            long_cent_sec1 = long_cent6[2]
-            long_cent_sec2 = long_cent_sec1.split('/')
-            long_cent_sec = float(long_cent_sec2[0])/ float(long_cent_sec2[1])
-            long_sign = str(tags['GPS GPSLongitudeRef'])
-            if long_sign == 'W':
-                long_cent = float(-1) * (long_cent_deg + ((long_cent_min + (long_cent_sec/float(60)))/float(60)))
-            elif long_sign == 'E' :
-                long_cent = long_cent_deg + ((long_cent_min + (long_cent_sec/float(60)))/float(60))
 
-        if long_cent == 'x' or lat_cent == 'x':
-            magdec = 'x'
-        else:
-            magdec = geomag.declination(lat_cent, long_cent)
-        #magnetic declination
-        if long_cent == 'x' or lat_cent == 'x':
-            groundheight = 'x'
-        else:
-            groundheight = get_elevation(long_cent, lat_cent)
+    #opening table
 
-        #calculating zvalue
-        if not 'GPS GPSAltitude' in tags:
-            zvalue = 'x'
-            print filename + 'has no altitude information'
-        else:
-            z1 = str(tags['GPS GPSAltitude']).split('/')
-            lenz = len(z1)
-            if lenz == 2:
-                zvalue = float(z1[0])/float(z1[1])
-            else:
-                zvalue = float(z1[0])
+    from numpy import genfromtxt
+    table = genfromtxt(file_path, delimiter=",", dtype=None)
 
-        #calculating AGL
-        if groundheight == -32768 or groundheight == -32767.0 or groundheight == 'x' or zvalue == 'x':
+    num_lines = len(table)
+
+    i = 2
+    while i < num_lines:
+        #looping through images/rows and generating .jpw files for each image/row
+        if lat_long == 'Degrees':
+            utm_coords = LLtoUTM(23,float(table[i][yy]),float(table[i][xx]))
+        else:
+            utm_coords = (utmzone3,float(table[i][xx]),float(table[i][yy]))
+        #pixel size on the ground
+        zvalue = table[i][3]
+        groundheight = get_elevation(float(table[i][xx]), float(table[i][yy]))
+        if groundheight == -32768:
             AGL = 'x'
             print 'No elevation info exists for the location of ' + filename
         else:
             AGL = zvalue - groundheight
 
-        # retrieving orientation info
-        if not 'GPS GPSImgDirection' in tags:
-            yaw = 'x'
-            print filename + ' has no orienation information!'
+        if AGL == 'x':
+            i = i + 1
         else:
-            yaw1 = str(tags['GPS GPSImgDirection'])
-            yaw2 = yaw1.split('/')
-            lenyaw = len(yaw2)
-            if lenyaw == 2:
-                yaw3 = yaw2[0]
-                yaw4 =yaw2[1]
-                yaw5 = float(yaw3)
-                yaw6 = float(yaw4)
-                if str(tags['GPS GPSImgDirectionRef']) == 'T':
-                    yaw = yaw5/yaw6
-                elif str(tags['GPS GPSImgDirectionRef']) == 'M':
-                    yaw = (yaw5/yaw6) + float(magdec)
-                else:
-                    yaw = 'x'
-                    print filename + 'has no orientation reference information!'
-            else:
-                if str(tags['GPS GPSImgDirectionRef']) == 'T':
-                    yaw = float(yaw2[0])
-                elif str(tags['GPS GPSImgDirectionRef']) == 'M':
-                    yaw = float(yaw2[0]) + float(magdec)
-                else:
-                    yaw = 'x'
-                    print filename + 'has no orientation reference information!'
-
-        #looping through images and generating .jpw, .prj and .aux.xml files for each image
-        #first determine if proper spatial information exists
-        if lat_cent == 'x' or long_cent == 'x' or yaw == 'x' or AGL == 'x':
-            print 'Files will not be generated for ' + filename
-        else:
-            utm_coords = LLtoUTM(23, lat_cent, long_cent)
-            #pixel size on the ground
             pix_size_ground = (float(pix_size_cam) * float(AGL))/(float(focal_length)/float(100))
             #image width on the ground
             im_wid_g = (float(im_wid_p) * float(pix_size_ground)) / float(100)
@@ -425,7 +371,8 @@ def take():
             x_nonrot = float(utm_coords[1]) - float(im_wid_g)/float(2)
             #y value of the top left corner before the image is rotated
             y_nonrot = float(utm_coords[2]) + im_hei_g/2
-            #clockwise yaw of aircraft
+            #clockwise yaw of aircraft from PhotoScan
+            yaw = table[i][19]
             #counter clockwise yaw of aircraft
             cc_yaw = 360 - yaw
             cos_cc_yaw = math.cos(math.radians(cc_yaw))
@@ -434,6 +381,8 @@ def take():
             x_cent = utm_coords[1]
             #y value for the center location of the image
             y_cent = utm_coords[2]
+            #name of image
+            name = table[i][0]
             #calculating values for jpw file
             #A,D,B and E are values that describe how the image should be rotated
             A = pix_size_ground / 100 * math.cos(math.radians(yaw))
@@ -689,9 +638,9 @@ def take():
             aux = '<PAMDataset> <SRS>' + project + '</SRS> </PAMDataset>'
 
             #generating jpw files and writing them
-            new_file = open(save_path_jpw+'/'+name[:-4]+'.jpgw', 'a')
+            new_file = open(save_path+'/'+name[:-11]+'.dngw', 'a')
             new_file.close()
-            new_file2 = open(save_path_jpw+'/'+name[:-4]+'.jpgw','w')
+            new_file2 = open(save_path+'/'+name[:-11]+'.dngw','w')
             new_file2.write(str(A))
             new_file2.write("\n")
             new_file2.write(str(D))
@@ -705,19 +654,108 @@ def take():
             new_file2.write(str(F))
             new_file2.close()
             #generating .prj files for GlobalMapper
-            new_file_prj = open(save_path_prj+'/'+name[:-4]+'.prj','a')
+            new_file_prj = open(save_path+'/'+name[:-11]+'.prj','a')
             new_file.close()
-            new_file_prj2 = open(save_path_prj+'/'+name[:-4]+'.prj','w')
+            new_file_prj2 = open(save_path+'/'+name[:-11]+'.prj','w')
             new_file_prj2.write(str(project))
             new_file_prj2.close()
             #generating .aux.xml files for ArcMap and QGIS
-            new_file_aux = open(save_path_aux+'/'+name[:-4]+'.JPG.aux.xml','a')
+            new_file_aux = open(save_path+'/'+name[:-11]+'.DNG.aux.xml','a')
             new_file_aux.close()
-            new_file_aux2 = open(save_path_aux+'/'+name[:-4]+'.JPG.aux.xml','w')
+            new_file_aux2 = open(save_path+'/'+name[:-11]+'.DNG.aux.xml','w')
             new_file_aux2.write(str(aux))
             new_file_aux2.close()
-
-
+            #looping through while loop
+            i = i + 1
     return
 
-take()
+# Generating a GUI for user input
+master = Tk()
+master.title("Georeference your UAS photos!")
+Label(master, text="Coordinates file path:").grid(row=1)
+Label(master, text="or Sample Image File Path:").grid(row=9)
+Label(master, text='DEM path:').grid(row=13)
+Label(master, text="Save path:").grid(row=15)
+Label(master, text="if UTM enter the zone and hemisphere").grid(row=5)
+
+e1 = Entry(master)
+e2 = Entry(master)
+e3 = Entry(master)
+e4 = Entry(master)
+e5 = Entry(master)
+
+e1.grid(row=1, column=1)
+e2.grid(row=9, column=1)
+e3.grid(row=15, column=1)
+e4.grid(row=13, column=1)
+e5.grid(row=5, column =1)
+
+Button(master, text='Quit', command=master.quit).grid(row=17, column=0, sticky=W, pady=4)
+Button(master, text='Enter', command=take).grid(row=17, column=1, sticky=W, pady=4)
+
+# Create a Tkinter variable
+tkvar2 = StringVar(master)
+
+# Dictionary with options
+choices2 = { 'Degrees','UTM'}
+tkvar2.set('UTM') # set the default option
+
+popupMenu2 = OptionMenu(master, tkvar2, *choices2)
+Label(master, text="Degrees or UTM (WGS 84):").grid(row = 3, column = 0)
+popupMenu2.grid(row = 3, column =1)
+
+def change_dropdown(*args):
+    print( tkvar2.get() )
+
+# link function to change dropdown
+tkvar2.trace('w', change_dropdown)
+
+# Create a Tkinter variable
+tkvar = StringVar(master)
+
+# Dictionary with options
+choices = { 'Ricoh GR I & II','GoPro Hero 4','MicaSense RedEdge 3', 'SonyA7R', 'FLIR Vue Pro R 13 mm', 'Other'}
+tkvar.set('Ricoh GR I & II') # set the default option
+
+popupMenu = OptionMenu(master, tkvar, *choices)
+Label(master, text="Choose a camera:").grid(row = 7, column = 0)
+popupMenu.grid(row = 7, column =1)
+
+def change_dropdown2(*args):
+    print( tkvar.get() )
+# link function to change dropdown
+tkvar.trace('w', change_dropdown2)
+
+tkvar3 = StringVar(master)
+
+# Dictionary with options
+choices3 = { 'GeoTagged', 'Estimated' }
+tkvar3.set('GeoTagged') # set the default option
+
+popupMenu3 = OptionMenu(master, tkvar3, *choices3)
+Label(master, text="Estimated or Geotagged:").grid(row = 11, column = 0)
+popupMenu3.grid(row = 11, column =1)
+
+def change_dropdown3(*args):
+    print( tkvar3.get() )
+# link function to change dropdown
+tkvar3.trace('w', change_dropdown3)
+
+tkvar4 = StringVar(master)
+
+# Dictionary with options
+choices4 = { 'S','N'}
+tkvar4.set('N') # set the default option
+
+popupMenu4 = OptionMenu(master, tkvar4, *choices4)
+popupMenu4.grid(row = 5, column =3)
+
+def change_dropdown4(*args):
+    print( tkvar4.get() )
+# link function to change dropdown
+tkvar4.trace('w', change_dropdown4)
+
+mainloop( )
+
+finish = Tk()
+Label(finish, text='Finished!')

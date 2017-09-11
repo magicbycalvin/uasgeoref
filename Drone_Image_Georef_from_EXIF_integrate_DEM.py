@@ -144,7 +144,7 @@ def _UTMLetterDesignator(Lat):
     if  Lat >= 0: return 'N'
     elif Lat < 0: return 'S'
     else: return 'Z'	# if the Latitude is outside the UTM limits
-    
+
 
 
 def take():
@@ -171,47 +171,52 @@ def take():
         # Treat it as data void as in SRTM documentation
         # if file is absent
         return -32768
-    
+
     def read_elevation_from_file(hgt_file, lon, lat):
         with open(hgt_file, 'rb') as hgt_data:
             # HGT is 16bit signed integer(i2) - big endian(>)
             elevations = np.fromfile(hgt_data, np.dtype('>i2'), -1).reshape((1201, 1201))
             #elevations = np.fromfile(hgt_data, np.dtype('>i2'), SAMPLES*SAMPLES)\
                                     #.reshape((SAMPLES, SAMPLES))
-    
+
             loncol = int(round(((math.ceil(abs(lon))) - abs(lon))*(1201-1)))
             latrow = int(round(((math.ceil(abs(lat)))-abs(lat))*(1201-1)))
             #lat_row = int(round((lat - int(lat)) * (SAMPLES - 1), 0))
             #lon_row = int(round((lon - int(lon)) * (SAMPLES - 1), 0))
-    
+
             return elevations[latrow,loncol].astype(float)
-    
+
     def get_file_name(lon, lat):
-    
+
         if lat >= 0:
             ns = 'N'
         elif lat < 0:
             ns = 'S'
-    
+
         if lon >= 0:
             ew = 'E'
         elif lon < 0:
             ew = 'W'
-    
-        namelat = str(int(math.floor(abs(lat))))
-    
+
+        if int(math.floor(abs(lat))) >=10:
+            namelat = str(int(math.floor(abs(lat))))
+        elif int(math.floor(abs(lat))) <10:
+            namelat = str(0) + str(int(math.floor(abs(lat))))
+
         if int(math.ceil(abs(lon))) >= 100:
             namelon = str(int(math.ceil(abs(lon))))
-        elif int(math.ceil(abs(lon))) <100:
+        elif int(math.ceil(abs(lon))) <100 and int(math.ceil(abs(lon))) >=10:
             namelon = str(0) + str(int(math.ceil(abs(lon))))
-    
+        elif int(math.ceil(abs(lon))) <10:
+            namelon = str(0)+str(0) + str(int(math.ceil(abs(lon))))
+
         hgt_file = ns + namelat+ ew + namelon+'.hgt'
         hgt_file_path = os.path.join(DEM_path, hgt_file)
         if os.path.isfile(hgt_file_path):
             return hgt_file_path
         else:
             return None
-    
+
 
     for filename in os.listdir(file_path):
         name = filename
@@ -282,7 +287,7 @@ def take():
                 long_cent = float(-1) * (long_cent_deg + ((long_cent_min + (long_cent_sec/float(60)))/float(60)))
             elif long_sign == 'E' :
                 long_cent = long_cent_deg + ((long_cent_min + (long_cent_sec/float(60)))/float(60))
-        
+
         if long_cent == 'x' or lat_cent == 'x':
             magdec = 'x'
         else:
@@ -292,8 +297,8 @@ def take():
             groundheight = 'x'
         else:
             groundheight = get_elevation(long_cent, lat_cent)
-        
-        #calculating zvalue 
+
+        #calculating zvalue
         if not 'GPS GPSAltitude' in tags:
             zvalue = 'x'
             print filename + 'has no altitude information'
@@ -304,14 +309,14 @@ def take():
                 zvalue = float(z1[0])/float(z1[1])
             else:
                 zvalue = float(z1[0])
-        
+
         #calculating AGL
         if groundheight == -32768 or groundheight == -32767.0 or groundheight == 'x' or zvalue == 'x':
             AGL = 'x'
             print 'No elevation info exists for the location of ' + filename
         else:
             AGL = zvalue - groundheight
-            
+
         # retrieving orientation info
         if not 'GPS GPSImgDirection' in tags:
             yaw = 'x'
@@ -636,7 +641,7 @@ def take():
             new_file_aux2 = open(save_path+'/'+name[:-4]+'.JPG.aux.xml','w')
             new_file_aux2.write(str(aux))
             new_file_aux2.close()
-            
+
             print name
             print lat_cent
             print long_cent
